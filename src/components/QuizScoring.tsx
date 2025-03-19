@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import { TeamAnswerCard } from "./TeamAnswerCard";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
@@ -7,6 +7,8 @@ import { Team, TeamAnswer, Question, Judgment } from "../types";
 
 export function QuizScoring() {
 	const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+	const [showLeaderboard, setShowLeaderboard] = useState(false);
+	const [teamScores, setTeamScores] = useState<{id: string, name: string, color: string, score: number}[]>([]);
 	const [organizedData, setOrganizedData] = useState({
 		questions: [] as Question[],
 		teamAnswers: {} as Record<string, TeamAnswer[]>,
@@ -39,11 +41,7 @@ export function QuizScoring() {
 			const response = await fetch(
 				`https://hack-genai.azurewebsites.net/api/teams/getByQuiz/${quizId}`
 			);
-
-			if (!response.ok) {
-				throw new Error("Failed to fetch teams");
-			}
-
+			if (!response.ok) throw new Error("Failed to fetch teams");
 			return response.json();
 		},
 		enabled: !!quizId,
@@ -56,45 +54,39 @@ export function QuizScoring() {
 			const response = await fetch(
 				`https://hack-genai.azurewebsites.net/api/judgements/getAll/${quizId}`
 			);
-
-			if (!response.ok) {
-				throw new Error("Failed to fetch judgments");
-			}
-
+			if (!response.ok) throw new Error("Failed to fetch judgments");
 			return response.json();
 		},
 		enabled: !!quizId,
 	});
 
 	useEffect(() => {
-		// Wait until all data is loaded
 		if (
 			answersQuery.data?.answers &&
 			teamsQuery.data &&
 			judgmentsQuery.data
 		) {
-			// Create a team name lookup map
 			const teamMap = new Map<string, Team>();
 			teamsQuery.data.forEach((team: Team) => {
 				teamMap.set(team.id, team);
 			});
 
-			// Create a judgment lookup map (by questionId and teamId)
 			const judgmentMap = new Map<string, Judgment>();
 			judgmentsQuery.data.forEach((judgment: Judgment) => {
 				const key = `${judgment.questionId}_${judgment.teamId}`;
 				judgmentMap.set(key, judgment);
 			});
 
-			// Organize data by question
 			const questions: Question[] = [];
 			const teamAnswers: Record<string, TeamAnswer[]> = {};
 			const questionMap = new Map<
 				string,
 				{ id: string; content: string; index: number }
 			>();
+            
+            // To track team scores
+            const scores: Record<string, {id: string, name: string, color: string, score: number}> = {};
 
-			// First, collect all unique questions and organize by question ID
 			answersQuery.data.answers.forEach((answer: any) => {
 				if (!questionMap.has(answer.questionId)) {
 					questionMap.set(answer.questionId, {
@@ -108,31 +100,44 @@ export function QuizScoring() {
 					});
 				}
 
-				// Organize team answers by question ID
 				if (!teamAnswers[answer.questionId]) {
 					teamAnswers[answer.questionId] = [];
 				}
 
-				// Get judgment for this answer if it exists
 				const judgmentKey = `${answer.questionId}_${answer.teamId}`;
 				const judgment = judgmentMap.get(judgmentKey);
-
-				// Get team data
 				const team = teamMap.get(answer.teamId);
+                const score = judgment ? judgment.score : 0;
+                
+                // Update team scores
+                if (team) {
+                    if (!scores[team.id]) {
+                        scores[team.id] = {
+                            id: team.id,
+                            name: team.name,
+                            color: team.color,
+                            score: 0
+                        };
+                    }
+                    scores[team.id].score += score;
+                }
 
-				// Convert to format expected by TeamAnswerCard
 				teamAnswers[answer.questionId].push({
 					teamId: answer.teamId,
 					teamName: team ? team.name : `Unknown Team`,
 					teamColor: team ? team.color : "bg-gray-500",
 					answerId: answer.id,
 					answer: answer.content,
-					score: judgment ? judgment.score : 0,
+					score: score,
 					motivation: judgment
 						? judgment.content
 						: "No judgment provided yet.",
 				});
 			});
+            
+            // Convert scores object to array and sort by name alphabetically
+            const scoreArray = Object.values(scores).sort((a, b) => a.name.localeCompare(b.name));
+            setTeamScores(scoreArray);
 
 			setOrganizedData({
 				questions,
@@ -154,19 +159,18 @@ export function QuizScoring() {
 		}
 	};
 
-	// Get the current question and its answers
 	const currentQuestion = organizedData.questions[currentQuestionIndex];
 	const currentAnswers = currentQuestion
-		? organizedData.teamAnswers[currentQuestion.id] || []
+		? organizedData.teamAnswers[currentQuestion.id].sort((a, b) => 
+				a.teamName.localeCompare(b.teamName)
+			)
 		: [];
 
-	// Check if any queries are loading
 	const isLoading =
 		answersQuery.isLoading ||
 		teamsQuery.isLoading ||
 		judgmentsQuery.isLoading;
 
-	// Check if any queries have errors
 	const hasError =
 		answersQuery.isError || teamsQuery.isError || judgmentsQuery.isError;
 	const errorMessage =
@@ -176,8 +180,8 @@ export function QuizScoring() {
 
 	if (isLoading) {
 		return (
-			<div className="min-h-screen bg-gray-50 flex items-center justify-center">
-				<div className="text-xl font-semibold">
+			<div className="min-h-screen bg-[#f0f7fc] flex items-center justify-center">
+				<div className="text-xl font-semibold text-[#0070AD]">
 					Loading quiz data...
 				</div>
 			</div>
@@ -186,7 +190,7 @@ export function QuizScoring() {
 
 	if (hasError) {
 		return (
-			<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+			<div className="min-h-screen bg-[#f0f7fc] flex items-center justify-center">
 				<div className="text-xl font-semibold text-red-600">
 					Error loading quiz data: {errorMessage || "Unknown error"}
 				</div>
@@ -195,24 +199,85 @@ export function QuizScoring() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gray-50 p-6">
-			<div className="max-w-6xl mx-auto">
-				{/* Navigation and question counter */}
+		<div className="min-h-screen bg-[#f0f7fc] p-6">
+			{/* Sogeti Logo Banner */}
+			<div className="fixed top-0 left-0 right-0 z-10 bg-white py-3 px-4 shadow-sm flex justify-center">
+				<div className="max-w-6xl w-full flex items-center justify-center gap-4">
+					<img src="/images/Sogeti-logo-2018.svg" alt="Sogeti Logo" className="h-12" />
+					<span className="text-[#004a73] font-bold text-xl">x</span>
+					<img src="/images/stampen-media.png" alt="Stampen Media Logo" className="h-10" />
+				</div>
+			</div>
+            
+			<div className="max-w-6xl mx-auto pt-14">
+				{/* Leaderboard Toggle Button */}
+				<div className="flex justify-end mb-4">
+					<button
+						onClick={() => setShowLeaderboard(!showLeaderboard)}
+						className="flex items-center gap-2 px-4 py-2 bg-[#0070AD] text-white rounded-lg hover:bg-[#005d8f] transition-colors"
+					>
+						<Trophy size={16} />
+						{showLeaderboard ? "Hide Leaderboard" : "Show Leaderboard"}
+					</button>
+				</div>
+
+				{/* Leaderboard */}
+					{showLeaderboard && (
+					<div className="bg-white rounded-xl shadow-md p-6 mb-6 border-2 border-blue-100">
+						<h2 className="text-xl font-semibold mb-4 text-[#004a73] flex items-center">
+						<Trophy className="mr-2 text-[#0070AD]" size={24} />
+						Leaderboard
+						</h2>
+						<div className="overflow-hidden rounded-lg border border-blue-100">
+						{teamScores
+							.sort((a, b) => b.score - a.score) // Sort in descending order by score
+							.map((team, index) => (
+							<div
+								key={team.id}
+								className={`flex items-center p-3 ${index % 2 === 0 ? 'bg-blue-50' : 'bg-white'}`}
+							>
+								<div className="flex items-center space-x-3 flex-1">
+								<span
+									className={`w-8 h-8 rounded-full flex items-center justify-center ${
+									index < 3 ? 'bg-[#0070AD]' : 'bg-gray-300'
+									} text-white font-bold`}
+								>
+									{index + 1}
+								</span>
+								<div className="w-8 h-8 rounded-lg overflow-hidden">
+									<img
+									src={`https://robohash.org/${team.name}?set=set3&size=70x70`}
+									alt={`${team.name}'s robot avatar`}
+									className="w-full h-full object-cover"
+									/>
+								</div>
+								<span className="font-medium text-[#004a73]">{team.name}</span>
+								</div>
+								<div className="text-lg font-bold text-[#0070AD]">{team.score} pts</div>
+							</div>
+							))}
+						{teamScores.length === 0 && (
+							<div className="p-4 text-center text-gray-500">No scores available yet</div>
+						)}
+						</div>
+					</div>
+					)}
+
 				<div className="flex justify-between items-center mb-8">
 					<button
 						onClick={goToPreviousQuestion}
 						disabled={currentQuestionIndex === 0}
-						className={`flex items-center p-2 ${
+						className={`flex items-center p-2 rounded-lg transition-colors ${
 							currentQuestionIndex === 0
-								? "text-gray-400"
-								: "text-blue-600 hover:text-blue-800"
+								? "text-blue-300 cursor-not-allowed"
+								: "text-[#0070AD] hover:text-[#005d8f] hover:bg-blue-100"
 						}`}
 					>
 						<ChevronLeft className="w-5 h-5 mr-1" />
 						Previous
 					</button>
 
-					<div className="text-lg font-medium">
+					<div className="text-lg font-medium text-[#004a73]">
 						Question {currentQuestionIndex + 1} of{" "}
 						{organizedData.totalQuestions}
 					</div>
@@ -223,11 +288,11 @@ export function QuizScoring() {
 							currentQuestionIndex ===
 							organizedData.totalQuestions - 1
 						}
-						className={`flex items-center p-2 ${
+						className={`flex items-center p-2 rounded-lg transition-colors ${
 							currentQuestionIndex ===
 							organizedData.totalQuestions - 1
-								? "text-gray-400"
-								: "text-blue-600 hover:text-blue-800"
+								? "text-blue-300 cursor-not-allowed"
+								: "text-[#0070AD] hover:text-[#005d8f] hover:bg-blue-100"
 						}`}
 					>
 						Next
@@ -235,19 +300,19 @@ export function QuizScoring() {
 					</button>
 				</div>
 
-				{/* Question content */}
 				{currentQuestion && (
-					<div className="bg-white rounded-lg shadow-md p-6 mb-8">
-						<h2 className="text-xl font-semibold mb-2">
+					<div className="bg-white rounded-xl shadow-md p-6 mb-8 border-2 border-blue-100">
+						<h2 className="text-xl font-semibold mb-2 text-[#004a73]">
 							Question:
 						</h2>
-						<p className="text-lg">{currentQuestion.content}</p>
+						<p className="text-lg text-[#0070AD]">
+							{currentQuestion.content}
+						</p>
 					</div>
 				)}
 
-				{/* Team answers */}
 				<div className="space-y-6">
-					<h2 className="text-xl font-semibold mb-4">
+					<h2 className="text-xl font-semibold mb-4 text-[#004a73]">
 						Team Answers:
 					</h2>
 					{currentAnswers.length > 0 ? (
@@ -258,8 +323,8 @@ export function QuizScoring() {
 							/>
 						))
 					) : (
-						<div className="bg-white rounded-lg shadow-md p-6">
-							<p className="text-gray-500">
+						<div className="bg-white rounded-xl shadow-md p-6 border-2 border-blue-100">
+							<p className="text-[#0070AD]">
 								No answers available for this question.
 							</p>
 						</div>
