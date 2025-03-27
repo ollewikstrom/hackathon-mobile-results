@@ -1,0 +1,43 @@
+{
+	"routes": [
+		{
+			"route": "/assets/*.js",
+			"headers": {
+				"content-type": "application/javascript"
+			}
+		},
+		{
+			"route": "/*.js",
+			"headers": {
+				"content-type": "application/javascript"
+			}
+		},
+		{
+			"route": "/api/*",
+			"methods": ["GET", "POST", "PUT", "DELETE"]
+		},
+		{
+			"route": "/*",
+			"statusCode": 200
+		}
+	],
+	"navigationFallback": {
+		"rewrite": "/index.html",
+		"exclude": [
+			"/images/*.{png,jpg,gif}",
+			"/css/*",
+			"/assets/*.js",
+			"/static/*",
+			"/api/*"
+		]
+	},
+	"platform": {
+		"apiRuntime": "node:20"
+	},
+	"mimeTypes": {
+		".js": "application/javascript",
+		".mjs": "application/javascript",
+		".css": "text/css",
+		".html": "text/html"
+	}
+}
