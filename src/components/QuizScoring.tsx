@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import { TeamAnswerCard } from "./TeamAnswerCard";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { Team, TeamAnswer, Question, Judgment } from "../types";
+import { createAvatar } from "@dicebear/core";
+import { bottts } from "@dicebear/collection";
 
 export function QuizScoring() {
 	const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -17,19 +19,43 @@ export function QuizScoring() {
 
 	const { quizId } = useParams<{ quizId: string }>();
 
-	// Fetch answers
+	// Helper function to sort team names naturally (handles numbers correctly)
+	const naturalSort = (a: string, b: string) => {
+		return a.localeCompare(b, undefined, {
+			numeric: true,
+			sensitivity: 'base'
+		});
+	};
+
+	// Function to generate team avatar from Dicebear
+	const generateTeamAvatar = (teamName: string) => {
+		return createAvatar(bottts, {
+			size: 128,
+			seed: teamName,
+		}).toDataUri();
+	};
+
+	// Fetch answers with no pagination or limits
 	const answersQuery = useQuery({
 		queryKey: ["answers", quizId],
 		queryFn: async () => {
 			const response = await fetch(
-				`https://hack-genai.azurewebsites.net/api/answers/getAll/${quizId}`
+				`https://hack-genai.azurewebsites.net/api/answers/getAll/${quizId}`,
+				{
+					headers: {
+						'Accept': 'application/json',
+						'Cache-Control': 'no-cache'
+					}
+				}
 			);
 
 			if (!response.ok) {
 				throw new Error("Failed to fetch answers");
 			}
 
-			return response.json();
+			const data = await response.json();
+			console.log('Total answers fetched:', data.answers?.length); // Debug log
+			return data;
 		},
 		enabled: !!quizId,
 	});
@@ -39,10 +65,18 @@ export function QuizScoring() {
 		queryKey: ["teams", quizId],
 		queryFn: async () => {
 			const response = await fetch(
-				`https://hack-genai.azurewebsites.net/api/teams/getByQuiz/${quizId}`
+				`https://hack-genai.azurewebsites.net/api/teams/getByQuiz/${quizId}`,
+				{
+					headers: {
+						'Accept': 'application/json',
+						'Cache-Control': 'no-cache'
+					}
+				}
 			);
 			if (!response.ok) throw new Error("Failed to fetch teams");
-			return response.json();
+			const data = await response.json();
+			console.log('Total teams fetched:', data.length); // Debug log
+			return data;
 		},
 		enabled: !!quizId,
 	});
@@ -52,10 +86,18 @@ export function QuizScoring() {
 		queryKey: ["judgments", quizId],
 		queryFn: async () => {
 			const response = await fetch(
-				`https://hack-genai.azurewebsites.net/api/judgements/getAll/${quizId}`
+				`https://hack-genai.azurewebsites.net/api/judgements/getAll/${quizId}`,
+				{
+					headers: {
+						'Accept': 'application/json',
+						'Cache-Control': 'no-cache'
+					}
+				}
 			);
 			if (!response.ok) throw new Error("Failed to fetch judgments");
-			return response.json();
+			const data = await response.json();
+			console.log('Total judgments fetched:', data.length); // Debug log
+			return data;
 		},
 		enabled: !!quizId,
 	});
@@ -66,6 +108,8 @@ export function QuizScoring() {
 			teamsQuery.data &&
 			judgmentsQuery.data
 		) {
+			console.log('Processing data for organization...'); // Debug log
+
 			const teamMap = new Map<string, Team>();
 			teamsQuery.data.forEach((team: Team) => {
 				teamMap.set(team.id, team);
@@ -87,7 +131,9 @@ export function QuizScoring() {
             // To track team scores
             const scores: Record<string, {id: string, name: string, color: string, score: number}> = {};
 
+			// Process all answers without any filtering
 			answersQuery.data.answers.forEach((answer: any) => {
+				// Add question if it doesn't exist
 				if (!questionMap.has(answer.questionId)) {
 					questionMap.set(answer.questionId, {
 						id: answer.questionId,
@@ -100,6 +146,7 @@ export function QuizScoring() {
 					});
 				}
 
+				// Initialize answers array for this question if needed
 				if (!teamAnswers[answer.questionId]) {
 					teamAnswers[answer.questionId] = [];
 				}
@@ -122,6 +169,7 @@ export function QuizScoring() {
                     scores[team.id].score += score;
                 }
 
+				// Add answer to the question's answers array
 				teamAnswers[answer.questionId].push({
 					teamId: answer.teamId,
 					teamName: team ? team.name : `Unknown Team`,
@@ -135,9 +183,26 @@ export function QuizScoring() {
 				});
 			});
             
-            // Convert scores object to array and sort by name alphabetically
-            const scoreArray = Object.values(scores).sort((a, b) => a.name.localeCompare(b.name));
+            // Convert scores object to array and sort by score (descending) and then by name
+            const scoreArray = Object.values(scores).sort((a, b) => {
+                if (b.score !== a.score) {
+                    return b.score - a.score; // Sort by score descending
+                }
+                return naturalSort(a.name, b.name); // If scores are equal, sort by name
+            });
             setTeamScores(scoreArray);
+
+			// Sort team answers within each question
+			Object.keys(teamAnswers).forEach(questionId => {
+				teamAnswers[questionId].sort((a, b) => naturalSort(a.teamName, b.teamName));
+			});
+
+			console.log('Data organization complete:'); // Debug logs
+			console.log('- Questions:', questions.length);
+			console.log('- Teams with scores:', scoreArray.length);
+			Object.keys(teamAnswers).forEach(qId => {
+				console.log(`- Answers for question ${qId}:`, teamAnswers[qId].length);
+			});
 
 			setOrganizedData({
 				questions,
@@ -161,9 +226,7 @@ export function QuizScoring() {
 
 	const currentQuestion = organizedData.questions[currentQuestionIndex];
 	const currentAnswers = currentQuestion
-		? organizedData.teamAnswers[currentQuestion.id].sort((a, b) => 
-				a.teamName.localeCompare(b.teamName)
-			)
+		? organizedData.teamAnswers[currentQuestion.id]
 		: [];
 
 	const isLoading =
@@ -222,46 +285,46 @@ export function QuizScoring() {
 				</div>
 
 				{/* Leaderboard */}
-					{showLeaderboard && (
+				{showLeaderboard && (
 					<div className="bg-white rounded-xl shadow-md p-6 mb-6 border-2 border-blue-100">
 						<h2 className="text-xl font-semibold mb-4 text-[#004a73] flex items-center">
-						<Trophy className="mr-2 text-[#0070AD]" size={24} />
-						Leaderboard
+							<Trophy className="mr-2 text-[#0070AD]" size={24} />
+							Leaderboard
 						</h2>
 						<div className="overflow-hidden rounded-lg border border-blue-100">
-						{teamScores
-							.sort((a, b) => b.score - a.score) // Sort in descending order by score
-							.map((team, index) => (
-							<div
-								key={team.id}
-								className={`flex items-center p-3 ${index % 2 === 0 ? 'bg-blue-50' : 'bg-white'}`}
-							>
-								<div className="flex items-center space-x-3 flex-1">
-								<span
-									className={`w-8 h-8 rounded-full flex items-center justify-center ${
-									index < 3 ? 'bg-[#0070AD]' : 'bg-gray-300'
-									} text-white font-bold`}
+							{teamScores.map((team, index) => (
+								<div 
+									key={team.id} 
+									className={`flex items-center p-3 ${index % 2 === 0 ? 'bg-blue-50' : 'bg-white'}`}
 								>
-									{index + 1}
-								</span>
-								<div className="w-8 h-8 rounded-lg overflow-hidden">
-									<img
-									src={`https://robohash.org/${team.name}?set=set3&size=70x70`}
-									alt={`${team.name}'s robot avatar`}
-									className="w-full h-full object-cover"
-									/>
+									<div className="flex items-center space-x-3 flex-1 min-w-0">
+										<span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${index < 3 ? 'bg-[#0070AD]' : 'bg-gray-300'} text-white font-bold`}>
+											{index + 1}
+										</span>
+										<div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden">
+											<img 
+												src={generateTeamAvatar(team.name)} 
+												alt={`${team.name} avatar`} 
+												className="w-8 h-8 rounded-lg object-cover"
+											/>
+										</div>
+										<span className="font-medium text-[#004a73] truncate">
+											{team.name}
+										</span>
+									</div>
+									<div className="flex-shrink-0 text-lg font-bold text-[#0070AD] ml-4">
+										{team.score} pts
+									</div>
 								</div>
-								<span className="font-medium text-[#004a73]">{team.name}</span>
-								</div>
-								<div className="text-lg font-bold text-[#0070AD]">{team.score} pts</div>
-							</div>
 							))}
-						{teamScores.length === 0 && (
-							<div className="p-4 text-center text-gray-500">No scores available yet</div>
-						)}
+							{teamScores.length === 0 && (
+								<div className="p-4 text-center text-gray-500">
+									No scores available yet
+								</div>
+							)}
 						</div>
 					</div>
-					)}
+				)}
 
 				<div className="flex justify-between items-center mb-8">
 					<button
@@ -313,15 +376,17 @@ export function QuizScoring() {
 
 				<div className="space-y-6">
 					<h2 className="text-xl font-semibold mb-4 text-[#004a73]">
-						Team Answers:
+						Team Answers ({currentAnswers.length})
 					</h2>
 					{currentAnswers.length > 0 ? (
-						currentAnswers.map((teamAnswer) => (
-							<TeamAnswerCard
-								key={teamAnswer.answerId}
-								teamAnswer={teamAnswer}
-							/>
-						))
+						<div className="grid gap-6">
+							{currentAnswers.map((teamAnswer) => (
+								<TeamAnswerCard
+									key={teamAnswer.answerId}
+									teamAnswer={teamAnswer}
+								/>
+							))}
+						</div>
 					) : (
 						<div className="bg-white rounded-xl shadow-md p-6 border-2 border-blue-100">
 							<p className="text-[#0070AD]">

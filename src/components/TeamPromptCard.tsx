@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { createAvatar } from "@dicebear/core";
+import { bottts } from "@dicebear/collection";
 
 interface TeamPromptCardProps {
   teamName: string;
@@ -10,13 +12,17 @@ interface TeamPromptCardProps {
 export function TeamPromptCard({ teamName, prompt, color = "bg-gray-500" }: TeamPromptCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Generate a consistent robot avatar URL for each team
-  const robotAvatar = `https://robohash.org/${encodeURIComponent(teamName)}?set=set3&size=100x100`;
+  const generateTeamAvatar = (teamName: string) => {
+      return createAvatar(bottts, {
+        size: 128,
+        seed: teamName,
+      }).toDataUri();
+    };
 
   return (
     <div 
       className={`rounded-xl shadow-sm overflow-hidden ${
-        isExpanded ? "bg-blue-50" : "bg-white"
+        isExpanded ? "bg-blue-50" : color
       } border border-blue-100 transition-colors duration-200`}
     >
       <button
@@ -25,18 +31,18 @@ export function TeamPromptCard({ teamName, prompt, color = "bg-gray-500" }: Team
       >
         <div className="flex items-center space-x-3">
           <img 
-            src={robotAvatar} 
+            src={generateTeamAvatar(teamName)} 
             alt={`${teamName} avatar`} 
             className="w-8 h-8 rounded-lg object-cover"
           />
-          <span className="font-medium text-[#004a73]">
+          <span className="font-semibold text-[#004a73] break-all line-clamp-2">
             {teamName}
           </span>
         </div>
         {isExpanded ? (
-          <ChevronUp className="h-5 w-5 text-[#0070AD]" />
+          <ChevronUp className="h-5 w-5 text-[#0070AD] flex-shrink-0" />
         ) : (
-          <ChevronDown className="h-5 w-5 text-[#0070AD]" />
+          <ChevronDown className="h-5 w-5 text-[#0070AD] flex-shrink-0" />
         )}
       </button>
 
@@ -44,7 +50,7 @@ export function TeamPromptCard({ teamName, prompt, color = "bg-gray-500" }: Team
         <div className="px-4 pb-4 space-y-3 border-t border-blue-100">
           <div className="pt-4">
             <h4 className="text-sm font-medium text-[#0070AD] mb-2">
-              Team Prompt
+              Team's Prompt
             </h4>
             <div className="bg-white rounded-lg p-4 border border-blue-100">
               <p className="text-[#004a73] whitespace-pre-line">

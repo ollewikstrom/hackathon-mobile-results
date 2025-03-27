@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { TeamAnswer } from "../types";
+import { createAvatar } from '@dicebear/core';
+import { bottts } from '@dicebear/collection';
 
 interface TeamAnswerCardProps {
   teamAnswer: TeamAnswer;
@@ -9,8 +11,11 @@ interface TeamAnswerCardProps {
 export function TeamAnswerCard({ teamAnswer }: TeamAnswerCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Generate a consistent robot avatar URL for each team
-  const robotAvatar = `https://robohash.org/${encodeURIComponent(teamAnswer.teamName)}?set=set3&size=100x100`;
+  // Generate a consistent robot avatar using Dicebear with teamName as the seed
+  const avatar = createAvatar(bottts, {
+    size: 128,
+    seed: teamAnswer.teamName,
+  }).toDataUri();
 
   const cleanContent = (content: string): string => {
     return content
@@ -34,32 +39,32 @@ export function TeamAnswerCard({ teamAnswer }: TeamAnswerCardProps) {
   return (
     <div className={`rounded-xl shadow-sm overflow-hidden ${isExpanded ? 'bg-blue-50' : 'bg-white'} transition-colors duration-200`}>
       <button
-        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-blue-50 transition-colors duration-200"
+        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-blue-50 transition-colors duration-200 gap-4"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
           <img 
-            src={robotAvatar} 
+            src={avatar} 
             alt={`${teamAnswer.teamName} avatar`} 
-            className="w-8 h-8 rounded-lg object-cover"
+            className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
           />
-          <div>
-            <span className="font-semibold text-[#004a73]">
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-[#004a73] break-all line-clamp-2">
               {teamAnswer.teamName}
-            </span>
+            </div>
             <div className={`text-sm ${getScoreColor(teamAnswer.score)} font-medium`}>
               {teamAnswer.score} points
             </div>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <div className={`px-3 py-1 rounded-full ${getScoreBackground(teamAnswer.score)} ${getScoreColor(teamAnswer.score)} text-sm font-medium`}>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className={`px-3 py-1 rounded-full ${getScoreBackground(teamAnswer.score)} ${getScoreColor(teamAnswer.score)} text-sm font-medium whitespace-nowrap`}>
             +{teamAnswer.score}
           </div>
           {isExpanded ? (
-            <ChevronUp className="h-5 w-5 text-[#0070AD]" />
+            <ChevronUp className="h-5 w-5 text-[#0070AD] flex-shrink-0" />
           ) : (
-            <ChevronDown className="h-5 w-5 text-[#0070AD]" />
+            <ChevronDown className="h-5 w-5 text-[#0070AD] flex-shrink-0" />
           )}
         </div>
       </button>
@@ -71,7 +76,7 @@ export function TeamAnswerCard({ teamAnswer }: TeamAnswerCardProps) {
               Answer
             </h4>
             <div className="bg-white rounded-lg p-4 border border-blue-100">
-              <p className="text-[#004a73] whitespace-pre-line">
+              <p className="text-[#004a73] whitespace-pre-line break-words">
                 {teamAnswer.answer.includes("```")
                   ? teamAnswer.answer
                   : cleanContent(teamAnswer.answer)}
@@ -84,7 +89,7 @@ export function TeamAnswerCard({ teamAnswer }: TeamAnswerCardProps) {
               Judge's Motivation
             </h4>
             <div className="bg-white rounded-lg p-4 border border-blue-100">
-              <p className="text-[#004a73]">
+              <p className="text-[#004a73] break-words">
                 {teamAnswer.motivation}
               </p>
             </div>
