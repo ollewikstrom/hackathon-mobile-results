@@ -83,11 +83,7 @@ export function QuizList() {
 			{/* Quiz Header Section */}
 			<div className="max-w-2xl mx-auto px-4 pt-20 pb-8 space-y-6">
 				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-				<h1 className="text-2xl font-bold text-[#004a73] text-center">
-					{quizQuery.data && quizQuery.data.length > 0 ? quizQuery.data[0].name : 'Untitled Quiz'}
-				</h1>
-					
-
+					<h1 className="text-2xl font-bold text-[#004a73] text-center">{quizQuery.data[0].name}</h1>
 					{quizId && (
 						<Link
 							to={`/${quizId}/answers`}
