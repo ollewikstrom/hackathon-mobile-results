@@ -50,21 +50,24 @@ export function QuizList() {
 	}, [query.data]);
 
 	
-	if (query.isLoading) {
+	if (quizQuery.isLoading) {
 		return (
-			<div className="min-h-screen bg-[#f0f7fc] flex items-center justify-center p-4">
-				<div className="text-xl font-semibold text-[#0070AD]">Loading teams...</div>
-			</div>
+		  <div className="min-h-screen bg-[#f0f7fc] flex items-center justify-center p-4">
+			<div className="text-xl font-semibold text-[#0070AD]">Loading quiz details...</div>
+		  </div>
 		);
-	}
+	  }
+	  
+	  if (quizQuery.isError) {
+		return (
+		  <div className="min-h-screen bg-[#f0f7fc] flex items-center justify-center p-4">
+			<div className="text-xl font-semibold text-red-600">
+			  Error loading quiz: {quizQuery.error instanceof Error ? quizQuery.error.message : 'Unknown error'}
+			</div>
+		  </div>
+		);
+	  }
 
-	if (query.isError) {
-		return (
-			<div className="min-h-screen bg-[#f0f7fc] flex items-center justify-center p-4">
-				<div className="text-xl font-semibold text-red-600">Error loading teams: {query.error.message}</div>
-			</div>
-		);
-	}
 
 	return (
 		<div className="min-h-screen bg-[#f0f7fc]">
@@ -80,7 +83,11 @@ export function QuizList() {
 			{/* Quiz Header Section */}
 			<div className="max-w-2xl mx-auto px-4 pt-20 pb-8 space-y-6">
 				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-					<h1 className="text-2xl font-bold text-[#004a73] text-center">{quizQuery.data[0].name}</h1>
+				<h1 className="text-2xl font-bold text-[#004a73] text-center">
+					{quizQuery.data && quizQuery.data.length > 0 ? quizQuery.data[0].name : 'Untitled Quiz'}
+				</h1>
+					
+
 					{quizId && (
 						<Link
 							to={`/${quizId}/answers`}
