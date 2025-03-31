@@ -267,8 +267,8 @@ export function QuizScoring() {
 			<div className="fixed top-0 left-0 right-0 z-10 bg-white py-3 px-4 shadow-sm flex justify-center">
 				<div className="max-w-6xl w-full flex items-center justify-center gap-4">
 					<img src="/images/Sogeti-logo-2018.svg" alt="Sogeti Logo" className="h-12" />
-					<span className="text-[#004a73] font-bold text-xl">x</span>
-					<img src="/images/stampen-media.png" alt="Stampen Media Logo" className="h-10" />
+					{/* <span className="text-[#004a73] font-bold text-xl">x</span>
+					<img src="/images/stampen-media.png" alt="Stampen Media Logo" className="h-10" /> */}
 				</div>
 			</div>
             
