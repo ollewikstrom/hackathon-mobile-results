@@ -107,7 +107,7 @@ export function QuizList() {
 						</div>
 					<ul className="space-y-4">
 						{teams.map((team: any) => (
-							<TeamPromptCard key={team.id} teamName={team.name} prompt={team.prompt} color={team.color} />
+							<TeamPromptCard key={team.id} teamId={team.id} teamName={team.name} prompt={team.prompt} color={team.color} />
 						))}
 					</ul>
 				</div>

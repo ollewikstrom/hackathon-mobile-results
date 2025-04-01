@@ -5,17 +5,18 @@ import { bottts } from "@dicebear/collection";
 
 interface TeamPromptCardProps {
   teamName: string;
+  teamId: string;
   prompt: string;
   color?: string;
 }
 
-export function TeamPromptCard({ teamName, prompt, color = "bg-gray-500" }: TeamPromptCardProps) {
+export function TeamPromptCard({ teamName, teamId, prompt, color = "bg-gray-500" }: TeamPromptCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const generateTeamAvatar = (teamName: string) => {
+  const generateTeamAvatar = (teamId: string) => {
       return createAvatar(bottts, {
         size: 128,
-        seed: teamName,
+        seed: teamId,
       }).toDataUri();
     };
 
@@ -31,7 +32,7 @@ export function TeamPromptCard({ teamName, prompt, color = "bg-gray-500" }: Team
       >
         <div className="flex items-center space-x-3">
           <img 
-            src={generateTeamAvatar(teamName)} 
+            src={generateTeamAvatar(teamId)} 
             alt={`${teamName} avatar`} 
             className="w-8 h-8 rounded-lg object-cover"
           />

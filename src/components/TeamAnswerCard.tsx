@@ -14,7 +14,7 @@ export function TeamAnswerCard({ teamAnswer }: TeamAnswerCardProps) {
   // Generate a consistent robot avatar using Dicebear with teamName as the seed
   const avatar = createAvatar(bottts, {
     size: 128,
-    seed: teamAnswer.teamName,
+    seed: teamAnswer.teamId,
   }).toDataUri();
 
   const cleanContent = (content: string): string => {
@@ -45,7 +45,7 @@ export function TeamAnswerCard({ teamAnswer }: TeamAnswerCardProps) {
         <div className="flex items-center gap-4 min-w-0 flex-1">
           <img 
             src={avatar} 
-            alt={`${teamAnswer.teamName} avatar`} 
+            alt={`${teamAnswer.teamId} avatar`} 
             className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
           />
           <div className="min-w-0 flex-1">

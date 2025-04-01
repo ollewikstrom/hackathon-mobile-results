@@ -28,10 +28,10 @@ export function QuizScoring() {
 	};
 
 	// Function to generate team avatar from Dicebear
-	const generateTeamAvatar = (teamName: string) => {
+	const generateTeamAvatar = (teamId: string) => {
 		return createAvatar(bottts, {
 			size: 128,
-			seed: teamName,
+			seed: teamId,
 		}).toDataUri();
 	};
 
@@ -303,8 +303,8 @@ export function QuizScoring() {
 										</span>
 										<div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden">
 											<img 
-												src={generateTeamAvatar(team.name)} 
-												alt={`${team.name} avatar`} 
+												src={generateTeamAvatar(team.id)} 
+												alt={`${team.id} avatar`} 
 												className="w-8 h-8 rounded-lg object-cover"
 											/>
 										</div>
